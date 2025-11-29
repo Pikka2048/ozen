@@ -45,9 +45,7 @@ ozen example/*.py
 - 過剰なコメントをしない
 - 余計なimportをしない
 
-[
-```
-example/sample1.py
+```example/sample1.py
 import os
 
 def main():
@@ -57,8 +55,7 @@ if __name__ == "__main__":
     main()
 ```
 
-```
-example/sample2.py
+```example/sample2.py
 import sys
 
 def func1(arg1):
@@ -67,7 +64,7 @@ def func1(arg1):
 def sum(arg1, arg2):
     return arg1, arg2
 ```
-]
+
 ````
 
 ## Install

@@ -79,12 +79,13 @@ func main() {
 				fmt.Fprintf(os.Stderr, "ERROR: %s file open failed.\n", filename)
 				continue
 			}
-			str := fmt.Sprintf("\n```\n%s\n%s```\n", filename, string(data))
+			str := fmt.Sprintf("\n```%s\n%s```\n", filename, string(data))
 			contents = append(contents, str)
 		}
 	}
 
-	result := fmt.Sprintf("%s\n%v", promptStr, contents)
+	content_str := strings.Join(contents, "")
+	result := fmt.Sprintf("%s%v", promptStr, content_str)
 
 	// クリップボードに渡す処理
 	if *useClip {
