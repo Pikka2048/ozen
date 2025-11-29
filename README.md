@@ -1,4 +1,4 @@
-# ozen 🍱
+# ozen
 
 **ozen** は、ChatGPT、Claude、GitHub CopilotなどのAIチャット（LLM）へのコード共有を効率化するためのCLIツールです。
 
