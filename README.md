@@ -4,10 +4,7 @@
 
 指示書（プロンプト）と複数のソースコードを読み込み、AIが文脈を理解しやすい形式に整形して出力します。また、標準出力だけでなくクリップボードへの直接転送（WSL/Linux対応）もサポートしています。
 
-## 使用方法
-
-### 基本的な使い方
-
+## Usage
 カレントディレクトリに対象のソースコードを指定して実行します。整形されたテキストが標準出力に表示されます。
 
 ```bash
@@ -36,7 +33,7 @@ ozen *.py | xclip -selection clipboardと同等。
 
 カレントディレクトリの `prompt.md` や `.github/copilot-instructions.md` などの指示書を自動的に検出し、コードの冒頭に付与します。
 
-### 生成されるテキスト例
+### Example
 
 ```bash
 # 自動的に prompt.md が読み込まれる想定
@@ -73,7 +70,7 @@ def sum(arg1, arg2):
 ]
 ````
 
-## インストール
+## Install
 
 [Releases](https://www.google.com/search?q=https://github.com/Pikka2048/ozen/releases) ページより、ご使用の環境に合わせたバイナリをダウンロードしてください。
 
@@ -90,7 +87,7 @@ chmod +x ozen
 sudo mv ozen /usr/local/bin/
 ```
 
-### 依存関係 (Linuxのみ)
+### Dependency  (Linux Only)
 
 WSL以外のネイティブなLinux環境で使用する場合、クリップボード操作のために `xclip` のインストールが必要です。
 
