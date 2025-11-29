@@ -1,0 +1,44 @@
+name: Build and Release
+
+on:
+  workflow_dispatch: 
+  push:
+    branches: [ "main" ]
+    # 以下のファイルに変更があれば実行される。
+    paths:
+      - 'main.go'
+      - '.github/workflows/**'
+
+permissions:
+  contents: write
+
+jobs:
+  test-setup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # タイムゾーン設定を入力できない問題対策
+      - name: Disable interactive prompts globally
+        run: echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y golang
+
+      - name: Build
+        run: make
+
+      - name: Release binary
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/heads/main')
+        with:
+          tag_name: latest
+          name: Latest Build
+          files: ozen-linux-amd64, ozen-windows-amd64.exe
+          draft: false
+          prerelease: false
