@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 jobs:
-  test-setup:
+  build_and_release:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
@@ -23,7 +23,7 @@ jobs:
 
       # タイムゾーン設定を入力できない問題対策
       - name: Disable interactive prompts globally
-        run: echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+        run: echo 'debconf debconf/frontend select Noninteractive' |sudo debconf-set-selections
 
       - name: Install dependencies
         run: |
