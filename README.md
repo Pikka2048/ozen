@@ -1,52 +1,49 @@
-ozen 🍱
+# ozen 🍱
 
-ozen は、AIチャット（ChatGPT, Claude, GitHub Copilotなど）にコードを渡す際の「お膳立て」をするCLIツールです。
+**ozen** は、ChatGPT、Claude、GitHub CopilotなどのAIチャット（LLM）へのコード共有を効率化するためのCLIツールです。
 
-指示書（プロンプト）と複数のソースコードを読み込み、AIが理解しやすい形式に整形してクリップボードにコピーします。WSL環境でのクリップボード転送にも対応しています。
+指示書（プロンプト）と複数のソースコードを読み込み、AIが文脈を理解しやすい形式に整形して出力します。また、標準出力だけでなくクリップボードへの直接転送（WSL/Linux対応）もサポートしています。
 
-特徴
+## 使用方法
 
-自動整形: ファイル名とコード内容をMarkdownのコードブロック形式で結合します。
+### 基本的な使い方
 
-プロンプト自動検出: カレントディレクトリの prompt.md や .github/copilot-instructions.md などの指示書を自動で検出し、コードの先頭に付与します。
+カレントディレクトリに対象のソースコードを指定して実行します。整形されたテキストが標準出力に表示されます。
 
-クリップボード連携: -clip フラグを付けるだけで、整形済みテキストをクリップボードに送信します（WSL / Linux対応）。
+```bash
+ozen main.py utils.py
+````
 
-使い方
+ワイルドカードも使用可能です。
 
-基本的な使い方
+```bash
+ozen src/*.py
+```
 
-カレントディレクトリに prompt.md がある場合、自動的に読み込まれます。
+デフォルトの探索対象以外の指示書を使用したい場合は、`-prompt` オプションで指定可能です。
 
-# prompt.md（もしあれば）と指定したソースコードを結合して標準出力に表示
-ozen main.go utils.go
+```bash
+ozen -prompt custom_instructions.md main.py
+```
 
+`-clip` フラグを使用すると、出力をコンソールに表示せず、直接クリップボードにコピーします。ブラウザのチャット欄に即座にペーストできるため効率的です。
 
-デフォルト以外の指示書を使いたい場合は、-prompt オプションで指定可能です。
-
-クリップボードにコピー（推奨）
-
--clip フラグを使用すると、出力を直接クリップボードにコピーします。
-
-# 全てのPythonソースを対象にする例
-ozen -clip *.py
-
-# 特定のディレクトリ以下のファイルを対象にする例
-ozen -clip src/*.py
+```
+ozen -clip src/*.py`は
+ozen *.py | xclip -selection clipboardと同等。
+```
 
 
-出力イメージ
+カレントディレクトリの `prompt.md` や `.github/copilot-instructions.md` などの指示書を自動的に検出し、コードの冒頭に付与します。
 
-以下のような形式のテキストが生成されます。これをAIチャットにペーストするだけで、文脈の共有が完了します。
+### 生成されるテキスト例
 
-実行コマンド例:
-
-# 自動でprompt.mdが読み込まれ、Pythonファイルと結合される
+```bash
+# 自動的に prompt.md が読み込まれる想定
 ozen example/*.py
+```
 
-
-生成されるテキスト:
-
+````markdown
 以下のルールを遵守して作業に取り組むこと。
 - 過剰なコメントをしない
 - 余計なimportをしない
@@ -70,33 +67,36 @@ import sys
 def func1(arg1):
     print(arg1)
 
-def sum(arg1,arg2):
+def sum(arg1, arg2):
     return arg1, arg2
 ```
 ]
+````
 
+## インストール
 
-インストール
+[Releases](https://www.google.com/search?q=https://github.com/Pikka2048/ozen/releases) ページより、ご使用の環境に合わせたバイナリをダウンロードしてください。
 
-Releases ページから、お使いの環境に合わせたバイナリをダウンロードしてください。
+### Linux / WSL (x86\_64)
 
-Linux / WSL (x86_64)
-
-# バイナリのダウンロード（バージョンは適宜変更してください）
+```bash
+# バイナリのダウンロード
 curl -L -o ozen [https://github.com/Pikka2048/ozen/releases/download/v0.0.1/ozen-linux-amd64](https://github.com/Pikka2048/ozen/releases/download/v0.0.1/ozen-linux-amd64)
 
 # 実行権限の付与
 chmod +x ozen
 
-# パスが通った場所へ移動
+# PATHの通ったディレクトリへ移動
 sudo mv ozen /usr/local/bin/
+```
 
+### 依存関係 (Linuxのみ)
 
-依存関係 (Linuxのみ)
+WSL以外のネイティブなLinux環境で使用する場合、クリップボード操作のために `xclip` のインストールが必要です。
 
-WSL以外の純粋なLinux環境で使用する場合、クリップボード操作のために xclip が必要です。
-
+```bash
 sudo apt install xclip
+```
 
-
-※ WSL環境ではWindows側の clip.exe を経由するため、追加のインストールは不要です。
+> Note
+> WSL環境ではWindows側の `clip.exe` を経由して動作するため、`xclip` のインストールは不要です。
