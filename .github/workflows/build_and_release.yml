@@ -27,8 +27,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apt-get update
-          apt-get install -y golang
+          sudo apt update
+          sudo apt install -y golang
 
       - name: Build
         run: make
