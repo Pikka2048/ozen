@@ -72,13 +72,13 @@ def sum(arg1, arg2):
 
 ## Install
 
-[Releases](https://www.google.com/search?q=https://github.com/Pikka2048/ozen/releases) ページより、ご使用の環境に合わせたバイナリをダウンロードしてください。
+[Releases](https://github.com/Pikka2048/ozen/releases) ページより、ご使用の環境に合わせたバイナリをダウンロードしてください。
 
 ### Linux / WSL (x86\_64)
 
 ```bash
 # バイナリのダウンロード
-curl -L -o ozen [https://github.com/Pikka2048/ozen/releases/download/v0.0.1/ozen-linux-amd64](https://github.com/Pikka2048/ozen/releases/download/v0.0.1/ozen-linux-amd64)
+curl -L -o ozen https://github.com/Pikka2048/ozen/releases/download/v0.0.1/ozen-linux-amd64
 
 # 実行権限の付与
 chmod +x ozen
