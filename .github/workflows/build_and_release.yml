@@ -39,6 +39,6 @@ jobs:
         with:
           tag_name: latest
           name: Latest Build
-          files: ozen-linux-amd64, ozen-windows-amd64.exe
+          files: dist/ozen-linux-amd64, dist/ozen-windows-amd64.exe
           draft: false
           prerelease: false
