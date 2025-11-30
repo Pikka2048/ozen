@@ -1,21 +1,36 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
+
+var (
+	promptFile string
+	useClip    bool
+	usePrint   bool
+	useTree    bool
+	depth      int
+	ignoreList []string
+)
+
+var defaultIgnores = []string{
+	".git",
+	".DS_Store",
+}
 
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// WSLか確認 (OS判定は呼び出し元で行う)
+// WSLか確認
 func isWSL() bool {
 	cmd := exec.Command("uname", "-r")
 	out, err := cmd.Output()
@@ -99,29 +114,34 @@ func appendTreeNodes(sb *strings.Builder, path string, prefix string, currentDep
 	return nil
 }
 
-var defaultIgnores = []string{
-	".git",
-	".DS_Store",
+// Cobra Root Command
+var rootCmd = &cobra.Command{
+	Use:   "ozen [patterns]",
+	Short: "Directory tree and file content merger",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		run(args)
+	},
+}
+
+func init() {
+	rootCmd.Flags().StringVarP(&promptFile, "prompt", "p", "", "any prompt file")
+	rootCmd.Flags().BoolVar(&useClip, "clip", true, "copy output to clipboard (auto-detects WSL/xclip)")
+	rootCmd.Flags().BoolVar(&usePrint, "print", false, "print output to stdout instead of clipboard")
+	rootCmd.Flags().BoolVarP(&useTree, "tree", "t", true, "tree command like directory listing")
+	rootCmd.Flags().IntVarP(&depth, "depth", "L", -1, "directory tree depth")
+	rootCmd.Flags().StringSliceVar(&ignoreList, "ignore", []string{}, "ignore file or directory name")
 }
 
 func main() {
-	promptFile := flag.String("prompt", "", "any prompt file")
-	useClip := flag.Bool("clip", true, "copy output to clipboard (auto-detects WSL/xclip)")
-	usePrint := flag.Bool("print", false, "copy output to clipboard (auto-detects WSL/xclip)")
-	useTree := flag.Bool("tree", true, "tree command like directory listing (written in golang)")
-	depthPtr := flag.Int("L", -1, "depth")
-	ignorePtr := flag.String("ignore", "", "ignore file or directory name")
-	flag.Parse()
-
-	inputPatterns := flag.Args()
-
-	if len(inputPatterns) == 0 {
-		fmt.Println("ERROR: Specify the input file or pattern.")
+	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+}
 
+func run(inputPatterns []string) {
 	// パターンに沿ったプロンプファイルが有ればそれを使う
-	targetPrompt := *promptFile
+	targetPrompt := promptFile
 	if targetPrompt == "" {
 		defaults := []string{"prompt.md", ".github/copilot-instructions.md", "instructions.md"}
 		for _, p := range defaults {
@@ -165,23 +185,20 @@ func main() {
 
 	// ディレクトリ構造取得
 	var treeStr string
-	if *useTree {
+	if useTree {
 		ignores := make(map[string]bool)
 		for _, name := range defaultIgnores {
 			ignores[name] = true
 		}
 		// 除外ファイル
-		if *ignorePtr != "" {
-			parts := strings.Split(*ignorePtr, ",")
-			for _, p := range parts {
-				trimmed := strings.TrimSpace(p)
-				if trimmed != "" {
-					ignores[trimmed] = true
-				}
+		for _, p := range ignoreList {
+			trimmed := strings.TrimSpace(p)
+			if trimmed != "" {
+				ignores[trimmed] = true
 			}
 		}
 		config := TreeConfig{
-			MaxDepth: *depthPtr,
+			MaxDepth: depth,
 			Ignores:  ignores,
 		}
 
@@ -195,26 +212,35 @@ func main() {
 
 	// これまでの内容を合体
 	content_str := strings.Join(contents, "")
-	result := fmt.Sprintf("%s%v\n```\n%s\n```", promptStr, content_str, treeStr)
+	if useTree {
+		content_str = fmt.Sprintf("%s\nOverview of the current directory.\n```\n%s```", content_str, treeStr)
+	}
+
+	result := fmt.Sprintf("%s%v", promptStr, content_str)
 
 	// 以降は後処理
+	if usePrint {
+		fmt.Println(result)
+		os.Exit(0)
+	}
+
 	// クリップボードに渡す処理
-	if *useClip {
+	if useClip {
 		var cmd *exec.Cmd
 		var msg string
 
 		if runtime.GOOS == "windows" {
 			// Windowsネイティブ
 			cmd = exec.Command("clip")
-			msg = "Copied to Windows clipboard. Note: If you want to print, set -print option."
+			msg = "Copied to Windows clipboard. Note: If you want to print, set --print option."
 		} else if runtime.GOOS == "linux" && isWSL() {
 			// WSLならiconv -> clip.exe
 			cmd = exec.Command("sh", "-c", "iconv -t cp932 | clip.exe")
-			msg = "Copied to Windows clipboard (via WSL). Note: If you want to print, set -print option."
+			msg = "Copied to Windows clipboard (via WSL). Note: If you want to print, set --print option."
 		} else {
 			// それ以外のLinuxならxclip
 			cmd = exec.Command("xclip", "-selection", "clipboard")
-			msg = "Copied to clipboard (via xclip). Note: If you want to print, set -print option."
+			msg = "Copied to clipboard (via xclip). Note: If you want to print, set --print option."
 		}
 
 		stdin, err := cmd.StdinPipe()
@@ -233,9 +259,5 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println(msg)
-	}
-
-	if *usePrint {
-		fmt.Println(result)
 	}
 }
