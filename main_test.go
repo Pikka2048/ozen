@@ -2,122 +2,120 @@ package main
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestFileExists(t *testing.T) {
 	tmpDir := t.TempDir()
-	existFile := filepath.Join(tmpDir, "exist.txt")
-	if err := os.WriteFile(existFile, []byte("test"), 0644); err != nil {
+	targetFile := filepath.Join(tmpDir, "test.txt")
+
+	// 作成前
+	if fileExists(targetFile) {
+		t.Errorf("Expected file %s to not exist", targetFile)
+	}
+
+	// 作成後
+	if err := os.WriteFile(targetFile, []byte("content"), 0644); err != nil {
 		t.Fatal(err)
 	}
-
-	tests := []struct {
-		path string
-		want bool
-	}{
-		{existFile, true},
-		{filepath.Join(tmpDir, "none.txt"), false},
-	}
-
-	for _, tt := range tests {
-		if got := fileExists(tt.path); got != tt.want {
-			t.Errorf("fileExists(%q) = %v, want %v", tt.path, got, tt.want)
-		}
+	if !fileExists(targetFile) {
+		t.Errorf("Expected file %s to exist", targetFile)
 	}
 }
 
-func TestCLI(t *testing.T) {
-	// バイナリのビルド（テスト実行ごとのクリーンな環境のため）
-	binPath := filepath.Join(t.TempDir(), "ozen_test")
-	if runtime.GOOS == "windows" {
-		binPath += ".exe"
-	}
-	buildCmd := exec.Command("go", "build", "-o", binPath, "main.go")
-	if err := buildCmd.Run(); err != nil {
-		t.Fatalf("Failed to build binary: %v", err)
-	}
+func TestGenerateTree(t *testing.T) {
+	// テスト用ディレクトリ構造の作成
+	// root/
+	// ├── file1.txt
+	// ├── .git/        (デフォルトで無視されるべきディレクトリ)
+	// │   └── config
+	// ├── sub/
+	// │   └── file2.txt
+	// └── node_modules/ (カスタム設定で無視するディレクトリ)
+	//     └── lib.js
 
-	// テスト用ディレクトリとファイル作成
-	workDir := t.TempDir()
-	promptContent := "Test Prompt Content\n"
-	codeContent := "print('hello')\n"
+	root := t.TempDir()
 
-	createFile := func(name, content string) {
-		path := filepath.Join(workDir, name)
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	// ディレクトリ作成
+	dirs := []string{".git", "sub", "node_modules"}
+	for _, d := range dirs {
+		if err := os.Mkdir(filepath.Join(root, d), 0755); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	createFile("prompt.md", promptContent)
-	createFile("src/main.py", codeContent)
-	createFile("other.md", "Custom Prompt")
+	// ファイル作成
+	files := []string{
+		"file1.txt",
+		filepath.Join(".git", "config"),
+		filepath.Join("sub", "file2.txt"),
+		filepath.Join("node_modules", "lib.js"),
+	}
+	for _, f := range files {
+		path := filepath.Join(root, f)
+		if err := os.WriteFile(path, []byte("dummy"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	tests := []struct {
-		name       string
-		args       []string
-		wantExit   int
-		wantOutput []string // 含まれているべき文字列
+		name          string
+		config        TreeConfig
+		shouldContain []string
+		shouldExclude []string
 	}{
 		{
-			name:       "No args",
-			args:       []string{},
-			wantExit:   1,
-			wantOutput: []string{"ERROR: Specify the input file"},
+			name: "Normal tree with ignores",
+			config: TreeConfig{
+				MaxDepth: -1,
+				Ignores:  map[string]bool{".git": true, "node_modules": true},
+			},
+			shouldContain: []string{
+				"file1.txt",
+				"sub",
+				"file2.txt",
+			},
+			shouldExclude: []string{
+				".git",
+				"node_modules",
+				"config", // .gitの中身
+				"lib.js", // node_modulesの中身
+			},
 		},
 		{
-			name:       "Default prompt and one file",
-			args:       []string{"src/main.py"},
-			wantExit:   0,
-			wantOutput: []string{promptContent, "src/main.py", codeContent},
-		},
-		{
-			name:       "Custom prompt flag",
-			args:       []string{"-prompt", "other.md", "src/main.py"},
-			wantExit:   0,
-			wantOutput: []string{"Custom Prompt", "src/main.py"},
-		},
-		{
-			name:       "Wildcard expansion",
-			args:       []string{"src/*.py"},
-			wantExit:   0,
-			wantOutput: []string{promptContent, "src/main.py"},
+			name: "MaxDepth restriction (Depth=1)",
+			config: TreeConfig{
+				MaxDepth: 1, // ルート直下のみ表示、サブディレクトリの中身は表示しない
+				Ignores:  map[string]bool{".git": true, "node_modules": true},
+			},
+			shouldContain: []string{
+				"file1.txt",
+				"sub",
+			},
+			shouldExclude: []string{
+				"file2.txt", // subの中身なので表示されないはず
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := exec.Command(binPath, tt.args...)
-			cmd.Dir = workDir
-			out, err := cmd.CombinedOutput()
-
-			// Exit code check
-			exitCode := 0
+			got, err := GenerateTree(root, tt.config)
 			if err != nil {
-				if exitErr, ok := err.(*exec.ExitError); ok {
-					exitCode = exitErr.ExitCode()
-				} else {
-					t.Fatalf("Command execution failed: %v", err)
+				t.Fatalf("GenerateTree() error = %v", err)
+			}
+
+			for _, s := range tt.shouldContain {
+				if !strings.Contains(got, s) {
+					t.Errorf("Output missing expected string: %s", s)
 				}
 			}
 
-			if exitCode != tt.wantExit {
-				t.Errorf("Exit code = %d, want %d", exitCode, tt.wantExit)
-			}
-
-			// Output content check
-			gotStr := string(out)
-			for _, want := range tt.wantOutput {
-				if !strings.Contains(gotStr, want) {
-					t.Errorf("Output missing %q. Got:\n%s", want, gotStr)
+			for _, s := range tt.shouldExclude {
+				if strings.Contains(got, s) {
+					t.Errorf("Output contains excluded string: %s", s)
 				}
 			}
 		})
