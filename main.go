@@ -29,9 +29,90 @@ func isWSL() bool {
 	return strings.Contains(s, "microsoft") || strings.Contains(s, "wsl")
 }
 
+type TreeConfig struct {
+	MaxDepth int // -1 で無制限
+	Ignores  map[string]bool
+}
+
+func GenerateTree(rootPath string, config TreeConfig) (string, error) {
+	var sb strings.Builder
+
+	sb.WriteString(rootPath + "\n")
+
+	// 再帰処理の開始
+	err := appendTreeNodes(&sb, rootPath, "", 0, config)
+	if err != nil {
+		return sb.String(), err
+	}
+
+	return sb.String(), nil
+}
+
+// strings.Builder にツリー情報を再帰で書き込む内部関数
+func appendTreeNodes(sb *strings.Builder, path string, prefix string, currentDepth int, config TreeConfig) error {
+	// 深さ制限チェック
+	if config.MaxDepth != -1 && currentDepth >= config.MaxDepth {
+		return nil
+	}
+
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return fmt.Errorf("failed to read dir %s: %w", path, err)
+	}
+
+	// フィルタリング処理
+	var filtered []os.DirEntry
+	for _, entry := range entries {
+		if config.Ignores[entry.Name()] {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+
+	count := len(filtered)
+	for i, entry := range filtered {
+		isLast := i == count-1
+
+		// 接続記号の決定
+		connector := "├── "
+		if isLast {
+			connector = "└── "
+		}
+
+		sb.WriteString(prefix)
+		sb.WriteString(connector)
+		sb.WriteString(entry.Name())
+		sb.WriteString("\n")
+
+		if entry.IsDir() {
+			newPrefix := prefix
+			if isLast {
+				newPrefix += "    "
+			} else {
+				newPrefix += "│   "
+			}
+
+			// 再帰呼び出し (sbのアドレスを渡す)
+			err := appendTreeNodes(sb, filepath.Join(path, entry.Name()), newPrefix, currentDepth+1, config)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+var defaultIgnores = []string{
+	".git",
+	".DS_Store",
+}
+
 func main() {
 	promptFile := flag.String("prompt", "", "any prompt file")
 	useClip := flag.Bool("clip", false, "copy output to clipboard (auto-detects WSL/xclip)")
+	useTree := flag.Bool("tree", true, "tree command like directory listing (written in golang)")
+	depthPtr := flag.Int("L", -1, "depth")
+	ignorePtr := flag.String("ignore", "", "ignore file or directory name")
 	flag.Parse()
 
 	inputPatterns := flag.Args()
@@ -84,9 +165,41 @@ func main() {
 		}
 	}
 
-	content_str := strings.Join(contents, "")
-	result := fmt.Sprintf("%s%v", promptStr, content_str)
+	// ディレクトリ構造取得
+	var treeStr string
+	if *useTree {
+		ignores := make(map[string]bool)
+		for _, name := range defaultIgnores {
+			ignores[name] = true
+		}
+		// 除外ファイル
+		if *ignorePtr != "" {
+			parts := strings.Split(*ignorePtr, ",")
+			for _, p := range parts {
+				trimmed := strings.TrimSpace(p)
+				if trimmed != "" {
+					ignores[trimmed] = true
+				}
+			}
+		}
+		config := TreeConfig{
+			MaxDepth: *depthPtr,
+			Ignores:  ignores,
+		}
 
+		_treeStr, err := GenerateTree("./", config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		treeStr = _treeStr
+	}
+
+	// これまでの内容を合体
+	content_str := strings.Join(contents, "")
+	result := fmt.Sprintf("%s%v\n```\n%s\n```", promptStr, content_str, treeStr)
+
+	// 以降は後処理
 	// クリップボードに渡す処理
 	if *useClip {
 		var cmd *exec.Cmd
