@@ -24,8 +24,13 @@ Flags:
  
 ### Example
 
+```
+$ ozen example/*.py
+Copied to Windows clipboard (via WSL). Note: If you want to print, set --print option.
+```
+
 ````
-$ ozen example/*.py --print --tree=true -L 2 --ignore .github
+$ ozen example/*.py --print -t -L 2 --ignore .github (--printで標準出力に）
 
 以下のルールを遵守して作業に取り組むこと。
 - 過剰なコメントをしない
