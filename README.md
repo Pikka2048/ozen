@@ -2,48 +2,36 @@
 
 **ozen** は、ChatGPT、Claude、GitHub CopilotなどのAIチャット（LLM）へのコード共有を効率化するためのCLIツールです。
 
-指示書（プロンプト）と複数のソースコードを読み込み、AIが文脈を理解しやすい形式に整形して出力します。また、標準出力だけでなくクリップボードへの直接転送（WSL/Linux対応）もサポートしています。
+プロンプトと複数のソースコードを読み込み、AIが文脈を理解しやすい形式に整形してクリップボードに出力します。(clip.exeかxclipを利用）
 
 ## Usage
-カレントディレクトリに対象のソースコードを指定して実行します。整形されたテキストが標準出力に表示されます。
-
-```bash
-ozen main.py utils.py
-````
-
-ワイルドカードも使用可能です。
-
-```bash
-ozen src/*.py
-```
-
-デフォルトの探索対象以外の指示書を使用したい場合は、`-prompt` オプションで指定可能です。
-
-```bash
-ozen -prompt custom_instructions.md main.py
-```
-
-`-clip` フラグを使用すると、出力をコンソールに表示せず、直接クリップボードにコピーします。ブラウザのチャット欄に即座にペーストできるため効率的です。
 
 ```
-ozen -clip src/*.py`は
-ozen *.py | xclip -selection clipboardと同等。
+Usage:
+  ozen [patterns] [flags]
+
+Flags:
+      --clip             copy output to clipboard (auto-detects WSL/xclip) (default true)
+  -L, --depth int        directory tree depth (default -1)
+  -h, --help             help for ozen
+      --ignore strings   ignore file or directory name
+      --print            print output to stdout instead of clipboard
+  -p, --prompt string    any prompt file
+  -t, --tree             tree command like directory listing (default true)
 ```
 
-
-カレントディレクトリの `prompt.md` や `.github/copilot-instructions.md` などの指示書を自動的に検出し、コードの冒頭に付与します。
-
+ `prompt.md` や `.github/copilot-instructions.md` は自動的に検出し、`--prompt`としてセットされます。
+ 
 ### Example
 
-```bash
-# 自動的に prompt.md が読み込まれる想定
-ozen example/*.py
-```
+````
+$ ozen example/*.py --print --tree=true -L 2 --ignore .github
 
-````markdown
 以下のルールを遵守して作業に取り組むこと。
 - 過剰なコメントをしない
 - 余計なimportをしない
+
+以下に必要な背景情報(context)を提供します。
 
 ```example/sample1.py
 import os
@@ -61,17 +49,36 @@ import sys
 def func1(arg1):
     print(arg1)
 
-def sum(arg1, arg2):
+def sum(arg1,arg2):
     return arg1, arg2
 ```
 
+Overview of the current directory.
+```
+./
+├── .gitignore
+├── Makefile
+├── README.md
+├── dist
+│   ├── ozen-linux-amd64
+│   └── ozen-windows-amd64.exe
+├── example
+│   ├── sample1.py
+│   └── sample2.py
+├── go.mod
+├── go.sum
+├── main.go
+├── main_test.go
+└── prompt.md
+```
 ````
+
 
 ## Install
 
 [Releases](https://github.com/Pikka2048/ozen/releases) ページより、ご使用の環境に合わせたバイナリをダウンロードしてください。
 
-### Linux / WSL (x86\_64)
+### Linux / WSL / Windows (x86\_64)
 
 ```bash
 # バイナリのダウンロード
@@ -83,14 +90,3 @@ chmod +x ozen
 # PATHの通ったディレクトリへ移動
 sudo mv ozen /usr/local/bin/
 ```
-
-### Dependency  (Linux Only)
-
-WSL以外のネイティブなLinux環境で使用する場合、クリップボード操作のために `xclip` のインストールが必要です。
-
-```bash
-sudo apt install xclip
-```
-
-> Note
-> WSL環境ではWindows側の `clip.exe` を経由して動作するため、`xclip` のインストールは不要です。
