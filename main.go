@@ -106,7 +106,8 @@ var defaultIgnores = []string{
 
 func main() {
 	promptFile := flag.String("prompt", "", "any prompt file")
-	useClip := flag.Bool("clip", false, "copy output to clipboard (auto-detects WSL/xclip)")
+	useClip := flag.Bool("clip", true, "copy output to clipboard (auto-detects WSL/xclip)")
+	usePrint := flag.Bool("print", false, "copy output to clipboard (auto-detects WSL/xclip)")
 	useTree := flag.Bool("tree", true, "tree command like directory listing (written in golang)")
 	depthPtr := flag.Int("L", -1, "depth")
 	ignorePtr := flag.String("ignore", "", "ignore file or directory name")
@@ -205,15 +206,15 @@ func main() {
 		if runtime.GOOS == "windows" {
 			// Windowsネイティブ
 			cmd = exec.Command("clip")
-			msg = "Copied to Windows clipboard."
+			msg = "Copied to Windows clipboard. Note: If you want to print, set -print option."
 		} else if runtime.GOOS == "linux" && isWSL() {
 			// WSLならiconv -> clip.exe
 			cmd = exec.Command("sh", "-c", "iconv -t cp932 | clip.exe")
-			msg = "Copied to Windows clipboard (via WSL)."
+			msg = "Copied to Windows clipboard (via WSL). Note: If you want to print, set -print option."
 		} else {
 			// それ以外のLinuxならxclip
 			cmd = exec.Command("xclip", "-selection", "clipboard")
-			msg = "Copied to clipboard (via xclip)."
+			msg = "Copied to clipboard (via xclip). Note: If you want to print, set -print option."
 		}
 
 		stdin, err := cmd.StdinPipe()
@@ -232,7 +233,9 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println(msg)
-	} else {
+	}
+
+	if *usePrint {
 		fmt.Println(result)
 	}
 }
