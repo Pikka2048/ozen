@@ -128,8 +128,8 @@ func init() {
 	rootCmd.Flags().StringVarP(&promptFile, "prompt", "p", "", "any prompt file")
 	rootCmd.Flags().BoolVar(&useClip, "clip", true, "copy output to clipboard (auto-detects WSL/xclip)")
 	rootCmd.Flags().BoolVar(&usePrint, "print", false, "print output to stdout instead of clipboard")
-	rootCmd.Flags().BoolVarP(&useTree, "tree", "t", true, "tree command like directory listing")
-	rootCmd.Flags().IntVarP(&depth, "depth", "L", -1, "directory tree depth")
+	rootCmd.Flags().BoolVarP(&useTree, "tree", "t", false, "tree command like directory listing")
+	rootCmd.Flags().IntVarP(&depth, "depth", "L", 2, "directory tree depth")
 	rootCmd.Flags().StringSliceVar(&ignoreList, "ignore", []string{}, "ignore file or directory name")
 }
 
