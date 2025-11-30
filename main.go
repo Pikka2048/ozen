@@ -15,11 +15,8 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-// WSLか確認
+// WSLか確認 (OS判定は呼び出し元で行う)
 func isWSL() bool {
-	if runtime.GOOS != "linux" {
-		return false
-	}
 	cmd := exec.Command("uname", "-r")
 	out, err := cmd.Output()
 	if err != nil {
@@ -205,7 +202,11 @@ func main() {
 		var cmd *exec.Cmd
 		var msg string
 
-		if isWSL() {
+		if runtime.GOOS == "windows" {
+			// Windowsネイティブ
+			cmd = exec.Command("clip")
+			msg = "Copied to Windows clipboard."
+		} else if runtime.GOOS == "linux" && isWSL() {
 			// WSLならiconv -> clip.exe
 			cmd = exec.Command("sh", "-c", "iconv -t cp932 | clip.exe")
 			msg = "Copied to Windows clipboard (via WSL)."
